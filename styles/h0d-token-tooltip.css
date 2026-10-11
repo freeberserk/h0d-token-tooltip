@@ -1,0 +1,81 @@
+#h0d-token-tooltip {
+  position: fixed;
+  z-index: 100000;
+  min-width: 215px;
+  max-width: 310px;
+  display: none;
+  pointer-events: none;
+  color: #f4efe2;
+  background: linear-gradient(180deg, rgba(10,37,43,.96), rgba(14,24,28,.96));
+  border: 1px solid rgba(47,184,188,.9);
+  border-left: 3px solid rgba(222,122,39,.95);
+  border-radius: 6px;
+  box-shadow: 0 8px 26px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.04);
+  backdrop-filter: blur(4px);
+  font-size: 13px;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+#h0d-token-tooltip.h0d-visible { display: block; }
+
+#h0d-token-tooltip .h0d-tooltip-header {
+  padding: 8px 10px 7px;
+  border-bottom: 1px solid rgba(47,184,188,.45);
+  background: rgba(0,0,0,.16);
+}
+
+#h0d-token-tooltip .h0d-tooltip-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .025em;
+}
+
+#h0d-token-tooltip .h0d-tooltip-type {
+  margin-top: 2px;
+  color: #e08a3a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+#h0d-token-tooltip .h0d-tooltip-body { padding: 6px 10px; }
+
+#h0d-token-tooltip .h0d-tooltip-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  min-height: 23px;
+}
+
+#h0d-token-tooltip .h0d-tooltip-row i {
+  color: #48c4c8;
+  text-align: center;
+}
+
+#h0d-token-tooltip .h0d-tooltip-label { color: #d6d2c7; }
+
+#h0d-token-tooltip .h0d-tooltip-row strong {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+#h0d-token-tooltip .h0d-tooltip-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 10px 9px;
+}
+
+#h0d-token-tooltip .h0d-tooltip-states span {
+  padding: 2px 6px;
+  color: #ffd7a1;
+  background: rgba(201,96,30,.18);
+  border: 1px solid rgba(222,122,39,.48);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
