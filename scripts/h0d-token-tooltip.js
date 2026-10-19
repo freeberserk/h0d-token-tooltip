@@ -117,6 +117,15 @@ function renderTooltip(token) {
   if (data.defense !== null) rows.push(statRow("fa-solid fa-shield-halved", "DEF", formatValue(data.defense)));
   if (data.speed !== null) rows.push(statRow("fa-solid fa-person-running", "Vitesse", `${formatValue(data.speed)} m`));
   if (data.perception !== null) rows.push(statRow("fa-solid fa-eye", "Perception", signedValue(data.perception)));
+  if (data.detection !== null) rows.push(statRow("fa-solid fa-crosshairs", "DET", formatValue(data.detection)));
+  if (data.perceptionRange !== null) rows.push(statRow("fa-solid fa-binoculars", "Portée PER", `${formatValue(data.perceptionRange)} m`));
+  if (data.specialSense) {
+    const suffix = data.specialSenseRange !== null ? ` · ${formatValue(data.specialSenseRange)} m` : "";
+    rows.push(statRow("fa-solid fa-wave-square", "Sens spécial", `${data.specialSense}${suffix}`));
+  }
+  for (const sensor of data.sensors ?? []) {
+    rows.push(statRow("fa-solid fa-satellite-dish", sensor.label, sensor.value));
+  }
 
   if (!rows.length) {
     hideTooltip();
@@ -152,7 +161,7 @@ function statRow(icon, label, value) {
 function getH0DStats(actor) {
   const p = actor.system?.props ?? {};
 
-  if (hasAny(p, ["H0D_Machine_PV_Actuels", "H0D_Machine_PV_Corps_Base"])) return machineStats(p);
+  if (hasAny(p, ["H0D_Machine_PV_Actuels", "H0D_Machine_PV_Corps_Base"])) return machineStats(actor, p);
   if (hasAny(p, ["H0D_Creature_PV_Actuels", "H0D_Creature_PV_Base"])) return creatureStats(p);
   if (hasAny(p, ["H0D_PV_Actuels", "H0D_FOR", "H0D_Defense_Totale_Calc"])) return pjStats(p);
 
@@ -160,13 +169,23 @@ function getH0DStats(actor) {
 }
 
 function pjStats(p) {
+  const perception = firstNumber(p, ["H0D_Skill_Perception_Total"]);
+  const detection = firstNumber(p, ["H0D_Perception_Detection_Calc"]) ?? (perception !== null ? 10 + perception : null);
+  const perceptionRange = firstNumber(p, ["H0D_Perception_Portee_Effective_Calc", "H0D_Perception_Portee_Base"])
+    ?? (perception !== null ? 30 : null);
+
   return {
     typeLabel: "PJ",
     hpCurrent: firstNumber(p, ["H0D_PV_Actuels"]),
     hpMax: firstNumber(p, ["H0D_PV_Max_Calc", "H0D_PV_Max_Total", "H0D_PV_Base_Total_Calc"]),
     defense: firstNumber(p, ["H0D_Defense_Totale_Calc", "H0D_Defense_Totale"]),
     speed: firstNumber(p, ["H0D_Vitesse_Effective", "H0D_Vitesse"]),
-    perception: firstNumber(p, ["H0D_Skill_Perception_Total"]),
+    perception,
+    detection,
+    perceptionRange,
+    specialSense: null,
+    specialSenseRange: null,
+    sensors: [],
     states: []
   };
 }
@@ -178,18 +197,29 @@ function creatureStats(p) {
     if (base !== null) speed = Math.max(0, base + numberOrZero(p.H0D_Creature_Vitesse_Divers) + numberOrZero(p.H0D_Creature_Mod_Vitesse_Total));
   }
 
+  const perception = firstNumber(p, ["H0D_Creature_Perception"]);
+  const detection = firstNumber(p, ["H0D_Creature_Detection_Calc"]) ?? (perception !== null ? 10 + perception : null);
+  const perceptionRange = firstNumber(p, ["H0D_Creature_Perception_Portee"]);
+  const specialSense = stringOrNull(p.H0D_Creature_Sens_Speciaux);
+  const specialSenseRange = specialSense ? firstNumber(p, ["H0D_Creature_Sens_Portee"]) : null;
+
   return {
     typeLabel: "Créature / PNJ",
     hpCurrent: firstNumber(p, ["H0D_Creature_PV_Actuels"]),
     hpMax: firstNumber(p, ["H0D_Creature_PV_Max_Calc", "H0D_Creature_PV_Max_Aff"]),
     defense: firstNumber(p, ["H0D_Creature_DEF_Total_Calc"]),
     speed,
-    perception: null,
+    perception,
+    detection,
+    perceptionRange,
+    specialSense,
+    specialSenseRange,
+    sensors: [],
     states: []
   };
 }
 
-function machineStats(p) {
+function machineStats(actor, p) {
   let hpMax = firstNumber(p, ["H0D_Machine_PV_Max_Calc", "H0D_Machine_PV_Max_Aff"]);
   if (hpMax === null) {
     const base = numberOrNull(p.H0D_Machine_PV_Corps_Base);
@@ -217,15 +247,63 @@ function machineStats(p) {
     for (const [key, label] of stateMap) if (truthy(p[key])) states.push(label);
   }
 
+  let perception = firstNumber(p, ["H0D_Machine_Perception_Effective_Calc", "H0D_Machine_Perception_Effective_Aff"]);
+  if (perception === null) {
+    const base = numberOrNull(p.H0D_Machine_Perception_Base);
+    if (base !== null) {
+      perception = base
+        + numberOrZero(p.H0D_Machine_Perception_Bonus_Pieces_Calc)
+        + numberOrZero(p.H0D_Machine_Mod_Perception_Temp)
+        + (truthy(p.H0D_Machine_Etat_Aveuglee) ? -4 : 0);
+    }
+  }
+  const detection = firstNumber(p, ["H0D_Machine_Detection_Calc"]) ?? (perception !== null ? 10 + perception : null);
+  const perceptionRange = firstNumber(p, ["H0D_Machine_Perception_Portee_Base"]);
+
   return {
     typeLabel: "Machine",
     hpCurrent: firstNumber(p, ["H0D_Machine_PV_Actuels", "H0D_Machine_PV_Actuels_Calc"]),
     hpMax,
     defense,
     speed,
-    perception: firstNumber(p, ["H0D_Machine_Perception_Effective_Calc", "H0D_Machine_Perception_Effective_Aff"]),
+    perception,
+    detection,
+    perceptionRange,
+    specialSense: null,
+    specialSenseRange: null,
+    sensors: machineSensors(actor),
     states
   };
+}
+
+function machineSensors(actor) {
+  const result = [];
+  const items = actor?.items ? Array.from(actor.items) : [];
+
+  for (const item of items) {
+    const p = item?.system?.props ?? {};
+    if (!truthy(p.H0D_Composant_Capteur_Specialise)) continue;
+
+    const state = String(p.H0D_Composant_Etat ?? "");
+    const pv = numberOrNull(p.H0D_Composant_PV_Actuels);
+    const active = state !== "Detruit" && state !== "Detache" && (pv === null || pv > 0);
+    const mode = stringOrNull(p.H0D_Composant_Capteur_Mode);
+    const target = stringOrNull(p.H0D_Composant_Capteur_Cible);
+    const range = numberOrNull(p.H0D_Composant_Capteur_Portee);
+
+    const parts = [];
+    if (!active) parts.push("HORS SERVICE");
+    if (mode) parts.push(mode);
+    if (target) parts.push(target);
+    if (range !== null && range > 0) parts.push(`${formatValue(range)} m`);
+
+    result.push({
+      label: item.name || "Capteur",
+      value: parts.join(" · ") || (active ? "Actif" : "HORS SERVICE")
+    });
+  }
+
+  return result;
 }
 
 function hasAny(obj, keys) {
@@ -249,6 +327,12 @@ function numberOrNull(value) {
 
 function numberOrZero(value) {
   return numberOrNull(value) ?? 0;
+}
+
+function stringOrNull(value) {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  return s ? s : null;
 }
 
 function truthy(value) {
