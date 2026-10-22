@@ -1,5 +1,19 @@
 # H0D Token Tooltip
 
+## v0.3.0 — Interface Actor commune
+
+L'infobulle lit désormais en priorité les quatre interfaces communes H0D exposées par les Actors :
+
+- `attributeBar.H0D_Health` → PV actuels / maximum ;
+- `attributeBar.H0D_Defense` → DEF finale ;
+- `attributeBar.H0D_Perception` → PER effective ;
+- `attributeBar.H0D_Detection` → DET passive.
+
+Les anciens champs PJ / Créature / Machine restent utilisés comme **fallback** afin que le module continue de fonctionner pendant une migration incomplète ou sur un ancien monde.
+
+Les données spécifiques restent spécifiques : vitesse, portée de perception, sens spéciaux et capteurs machines ne sont pas fusionnés dans cette interface.
+
+
 Module Foundry VTT v14 pour la campagne Zero Dawn utilisant Custom System Builder.
 
 Affiche au survol d'un token, par défaut uniquement au MJ :
