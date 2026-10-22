@@ -158,27 +158,49 @@ function statRow(icon, label, value) {
   </div>`;
 }
 
+function commonBarNumber(actor,key,field="value") {
+  return numberOrNull(actor?.system?.attributeBar?.[key]?.[field]);
+}
+
+function commonStatNumber(actor,key) {
+  const apiValue=game.h0dTemplateManager?.commonStat?.(actor,key);
+  const viaApi=numberOrNull(apiValue);
+  if (viaApi!==null) return viaApi;
+  return commonBarNumber(actor,key);
+}
+
+function commonHealth(actor) {
+  const viaApi=game.h0dTemplateManager?.commonHealth?.(actor);
+  return {
+    value:numberOrNull(viaApi?.value) ?? commonBarNumber(actor,"H0D_Health","value"),
+    max:numberOrNull(viaApi?.max) ?? commonBarNumber(actor,"H0D_Health","max")
+  };
+}
+
 function getH0DStats(actor) {
   const p = actor.system?.props ?? {};
 
   if (hasAny(p, ["H0D_Machine_PV_Actuels", "H0D_Machine_PV_Corps_Base"])) return machineStats(actor, p);
-  if (hasAny(p, ["H0D_Creature_PV_Actuels", "H0D_Creature_PV_Base"])) return creatureStats(p);
-  if (hasAny(p, ["H0D_PV_Actuels", "H0D_FOR", "H0D_Defense_Totale_Calc"])) return pjStats(p);
+  if (hasAny(p, ["H0D_Creature_PV_Actuels", "H0D_Creature_PV_Base"])) return creatureStats(actor, p);
+  if (hasAny(p, ["H0D_PV_Actuels", "H0D_FOR", "H0D_Defense_Totale_Calc"])) return pjStats(actor, p);
 
   return null;
 }
 
-function pjStats(p) {
-  const perception = firstNumber(p, ["H0D_Skill_Perception_Total"]);
-  const detection = firstNumber(p, ["H0D_Perception_Detection_Calc"]) ?? (perception !== null ? 10 + perception : null);
+function pjStats(actor,p) {
+  const health=commonHealth(actor);
+  const perception = commonStatNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Skill_Perception_Total"]);
+  const detection = commonStatNumber(actor,"H0D_Detection")
+    ?? firstNumber(p, ["H0D_Perception_Detection_Calc"])
+    ?? (perception !== null ? 10 + perception : null);
   const perceptionRange = firstNumber(p, ["H0D_Perception_Portee_Effective_Calc", "H0D_Perception_Portee_Base"])
     ?? (perception !== null ? 30 : null);
 
   return {
     typeLabel: "PJ",
-    hpCurrent: firstNumber(p, ["H0D_PV_Actuels"]),
-    hpMax: firstNumber(p, ["H0D_PV_Max_Calc", "H0D_PV_Max_Total", "H0D_PV_Base_Total_Calc"]),
-    defense: firstNumber(p, ["H0D_Defense_Totale_Calc", "H0D_Defense_Totale"]),
+    hpCurrent: health.value ?? firstNumber(p, ["H0D_PV_Actuels"]),
+    hpMax: health.max ?? firstNumber(p, ["H0D_PV_Max_Calc", "H0D_PV_Max_Total", "H0D_PV_Base_Total_Calc"]),
+    defense: commonStatNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Defense_Totale_Calc", "H0D_Defense_Totale"]),
     speed: firstNumber(p, ["H0D_Vitesse_Effective", "H0D_Vitesse"]),
     perception,
     detection,
@@ -190,24 +212,27 @@ function pjStats(p) {
   };
 }
 
-function creatureStats(p) {
+function creatureStats(actor,p) {
+  const health=commonHealth(actor);
   let speed = firstNumber(p, ["H0D_Creature_Vitesse_Total_Calc", "H0D_Creature_Vitesse_Total_Aff"]);
   if (speed === null) {
     const base = numberOrNull(p.H0D_Creature_Vitesse_Base);
     if (base !== null) speed = Math.max(0, base + numberOrZero(p.H0D_Creature_Vitesse_Divers) + numberOrZero(p.H0D_Creature_Mod_Vitesse_Total));
   }
 
-  const perception = firstNumber(p, ["H0D_Creature_Perception"]);
-  const detection = firstNumber(p, ["H0D_Creature_Detection_Calc"]) ?? (perception !== null ? 10 + perception : null);
+  const perception = commonStatNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Creature_Perception"]);
+  const detection = commonStatNumber(actor,"H0D_Detection")
+    ?? firstNumber(p, ["H0D_Creature_Detection_Calc"])
+    ?? (perception !== null ? 10 + perception : null);
   const perceptionRange = firstNumber(p, ["H0D_Creature_Perception_Portee"]);
   const specialSense = stringOrNull(p.H0D_Creature_Sens_Speciaux);
   const specialSenseRange = specialSense ? firstNumber(p, ["H0D_Creature_Sens_Portee"]) : null;
 
   return {
     typeLabel: "Créature / PNJ",
-    hpCurrent: firstNumber(p, ["H0D_Creature_PV_Actuels"]),
-    hpMax: firstNumber(p, ["H0D_Creature_PV_Max_Calc", "H0D_Creature_PV_Max_Aff"]),
-    defense: firstNumber(p, ["H0D_Creature_DEF_Total_Calc"]),
+    hpCurrent: health.value ?? firstNumber(p, ["H0D_Creature_PV_Actuels"]),
+    hpMax: health.max ?? firstNumber(p, ["H0D_Creature_PV_Max_Calc", "H0D_Creature_PV_Max_Aff"]),
+    defense: commonStatNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Creature_DEF_Total_Calc"]),
     speed,
     perception,
     detection,
@@ -220,13 +245,14 @@ function creatureStats(p) {
 }
 
 function machineStats(actor, p) {
-  let hpMax = firstNumber(p, ["H0D_Machine_PV_Max_Calc", "H0D_Machine_PV_Max_Aff"]);
+  const health=commonHealth(actor);
+  let hpMax = health.max ?? firstNumber(p, ["H0D_Machine_PV_Max_Calc", "H0D_Machine_PV_Max_Aff"]);
   if (hpMax === null) {
     const base = numberOrNull(p.H0D_Machine_PV_Corps_Base);
     if (base !== null) hpMax = base + numberOrZero(p.H0D_Machine_PV_Bonus_Pieces_Calc);
   }
 
-  let defense = firstNumber(p, ["H0D_Machine_DEF_Total_Calc", "H0D_Machine_DEF_Total_Aff"]);
+  let defense = commonStatNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Machine_DEF_Total_Calc", "H0D_Machine_DEF_Total_Aff"]);
   if (defense === null) {
     const base = numberOrNull(p.H0D_Machine_DEF_Corps_Base);
     if (base !== null) defense = Math.max(0, base + numberOrZero(p.H0D_Machine_DEF_Bonus_Pieces_Calc) + numberOrZero(p.H0D_Machine_Mod_DEF_Temp));
@@ -247,7 +273,7 @@ function machineStats(actor, p) {
     for (const [key, label] of stateMap) if (truthy(p[key])) states.push(label);
   }
 
-  let perception = firstNumber(p, ["H0D_Machine_Perception_Effective_Calc", "H0D_Machine_Perception_Effective_Aff"]);
+  let perception = commonStatNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Machine_Perception_Effective_Calc", "H0D_Machine_Perception_Effective_Aff"]);
   if (perception === null) {
     const base = numberOrNull(p.H0D_Machine_Perception_Base);
     if (base !== null) {
@@ -257,12 +283,14 @@ function machineStats(actor, p) {
         + (truthy(p.H0D_Machine_Etat_Aveuglee) ? -4 : 0);
     }
   }
-  const detection = firstNumber(p, ["H0D_Machine_Detection_Calc"]) ?? (perception !== null ? 10 + perception : null);
+  const detection = commonStatNumber(actor,"H0D_Detection")
+    ?? firstNumber(p, ["H0D_Machine_Detection_Calc"])
+    ?? (perception !== null ? 10 + perception : null);
   const perceptionRange = firstNumber(p, ["H0D_Machine_Perception_Portee_Base"]);
 
   return {
     typeLabel: "Machine",
-    hpCurrent: firstNumber(p, ["H0D_Machine_PV_Actuels", "H0D_Machine_PV_Actuels_Calc"]),
+    hpCurrent: health.value ?? firstNumber(p, ["H0D_Machine_PV_Actuels", "H0D_Machine_PV_Actuels_Calc"]),
     hpMax,
     defense,
     speed,

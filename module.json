@@ -1,8 +1,8 @@
 {
   "id": "h0d-token-tooltip",
   "title": "H0D Token Tooltip",
-  "description": "Infobulle MJ au survol des tokens H0D : combat, PER/DET, portée, sens spéciaux et capteurs machines.",
-  "version": "0.2.0",
+  "description": "Infobulle MJ H0D : interface Actor commune (PV/DEF/PER/DET), vitesse, portée, sens spéciaux et capteurs machines.",
+  "version": "0.3.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.364"
@@ -20,5 +20,5 @@
   ],
   "url": "https://github.com/freeberserk/h0d-token-tooltip",
   "manifest": "https://github.com/freeberserk/h0d-token-tooltip/releases/latest/download/module.json",
-  "download": "https://github.com/freeberserk/h0d-token-tooltip/releases/download/v0.2.0/h0d-token-tooltip.zip"
+  "download": "https://github.com/freeberserk/h0d-token-tooltip/releases/download/v0.3.0/h0d-token-tooltip.zip"
 }
