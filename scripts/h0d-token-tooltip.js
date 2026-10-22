@@ -162,10 +162,18 @@ function commonBarNumber(actor,key,field="value") {
   return numberOrNull(actor?.system?.attributeBar?.[key]?.[field]);
 }
 
+function commonStatNumber(actor,key) {
+  const apiValue=game.h0dTemplateManager?.commonStat?.(actor,key);
+  const viaApi=numberOrNull(apiValue);
+  if (viaApi!==null) return viaApi;
+  return commonBarNumber(actor,key);
+}
+
 function commonHealth(actor) {
+  const viaApi=game.h0dTemplateManager?.commonHealth?.(actor);
   return {
-    value:commonBarNumber(actor,"H0D_Health","value"),
-    max:commonBarNumber(actor,"H0D_Health","max")
+    value:numberOrNull(viaApi?.value) ?? commonBarNumber(actor,"H0D_Health","value"),
+    max:numberOrNull(viaApi?.max) ?? commonBarNumber(actor,"H0D_Health","max")
   };
 }
 
@@ -181,8 +189,8 @@ function getH0DStats(actor) {
 
 function pjStats(actor,p) {
   const health=commonHealth(actor);
-  const perception = commonBarNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Skill_Perception_Total"]);
-  const detection = commonBarNumber(actor,"H0D_Detection")
+  const perception = commonStatNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Skill_Perception_Total"]);
+  const detection = commonStatNumber(actor,"H0D_Detection")
     ?? firstNumber(p, ["H0D_Perception_Detection_Calc"])
     ?? (perception !== null ? 10 + perception : null);
   const perceptionRange = firstNumber(p, ["H0D_Perception_Portee_Effective_Calc", "H0D_Perception_Portee_Base"])
@@ -192,7 +200,7 @@ function pjStats(actor,p) {
     typeLabel: "PJ",
     hpCurrent: health.value ?? firstNumber(p, ["H0D_PV_Actuels"]),
     hpMax: health.max ?? firstNumber(p, ["H0D_PV_Max_Calc", "H0D_PV_Max_Total", "H0D_PV_Base_Total_Calc"]),
-    defense: commonBarNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Defense_Totale_Calc", "H0D_Defense_Totale"]),
+    defense: commonStatNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Defense_Totale_Calc", "H0D_Defense_Totale"]),
     speed: firstNumber(p, ["H0D_Vitesse_Effective", "H0D_Vitesse"]),
     perception,
     detection,
@@ -212,8 +220,8 @@ function creatureStats(actor,p) {
     if (base !== null) speed = Math.max(0, base + numberOrZero(p.H0D_Creature_Vitesse_Divers) + numberOrZero(p.H0D_Creature_Mod_Vitesse_Total));
   }
 
-  const perception = commonBarNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Creature_Perception"]);
-  const detection = commonBarNumber(actor,"H0D_Detection")
+  const perception = commonStatNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Creature_Perception"]);
+  const detection = commonStatNumber(actor,"H0D_Detection")
     ?? firstNumber(p, ["H0D_Creature_Detection_Calc"])
     ?? (perception !== null ? 10 + perception : null);
   const perceptionRange = firstNumber(p, ["H0D_Creature_Perception_Portee"]);
@@ -224,7 +232,7 @@ function creatureStats(actor,p) {
     typeLabel: "Créature / PNJ",
     hpCurrent: health.value ?? firstNumber(p, ["H0D_Creature_PV_Actuels"]),
     hpMax: health.max ?? firstNumber(p, ["H0D_Creature_PV_Max_Calc", "H0D_Creature_PV_Max_Aff"]),
-    defense: commonBarNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Creature_DEF_Total_Calc"]),
+    defense: commonStatNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Creature_DEF_Total_Calc"]),
     speed,
     perception,
     detection,
@@ -244,7 +252,7 @@ function machineStats(actor, p) {
     if (base !== null) hpMax = base + numberOrZero(p.H0D_Machine_PV_Bonus_Pieces_Calc);
   }
 
-  let defense = commonBarNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Machine_DEF_Total_Calc", "H0D_Machine_DEF_Total_Aff"]);
+  let defense = commonStatNumber(actor,"H0D_Defense") ?? firstNumber(p, ["H0D_Machine_DEF_Total_Calc", "H0D_Machine_DEF_Total_Aff"]);
   if (defense === null) {
     const base = numberOrNull(p.H0D_Machine_DEF_Corps_Base);
     if (base !== null) defense = Math.max(0, base + numberOrZero(p.H0D_Machine_DEF_Bonus_Pieces_Calc) + numberOrZero(p.H0D_Machine_Mod_DEF_Temp));
@@ -265,7 +273,7 @@ function machineStats(actor, p) {
     for (const [key, label] of stateMap) if (truthy(p[key])) states.push(label);
   }
 
-  let perception = commonBarNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Machine_Perception_Effective_Calc", "H0D_Machine_Perception_Effective_Aff"]);
+  let perception = commonStatNumber(actor,"H0D_Perception") ?? firstNumber(p, ["H0D_Machine_Perception_Effective_Calc", "H0D_Machine_Perception_Effective_Aff"]);
   if (perception === null) {
     const base = numberOrNull(p.H0D_Machine_Perception_Base);
     if (base !== null) {
@@ -275,7 +283,7 @@ function machineStats(actor, p) {
         + (truthy(p.H0D_Machine_Etat_Aveuglee) ? -4 : 0);
     }
   }
-  const detection = commonBarNumber(actor,"H0D_Detection")
+  const detection = commonStatNumber(actor,"H0D_Detection")
     ?? firstNumber(p, ["H0D_Machine_Detection_Calc"])
     ?? (perception !== null ? 10 + perception : null);
   const perceptionRange = firstNumber(p, ["H0D_Machine_Perception_Portee_Base"]);
